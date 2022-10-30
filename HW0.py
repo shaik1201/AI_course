@@ -8,6 +8,7 @@ class Node:
 
         return str(self.value)
 
+print("h")
 
 def sortedMerge(a, b): # This is the merging part like in normal merge sort.
     result = None
