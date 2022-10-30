@@ -8,7 +8,6 @@ class Node:
 
         return str(self.value)
 
-print("h")
 
 def sortedMerge(a, b): # This is the merging part like in normal merge sort.
     result = None
@@ -84,3 +83,6 @@ if __name__ == '__main__':
     while tmp2 is not None:
         print(tmp2.value)
         tmp2 = tmp2.next
+
+
+print('feijb')
