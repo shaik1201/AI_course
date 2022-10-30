@@ -20,7 +20,6 @@ def maxProfit(prices):
 
 # Q3.1
 class Node:
-
     def __init__(self, value, next_node=None):
         self.value = value
         self.next = next_node
@@ -46,14 +45,6 @@ def get_length(head: Node):
 
 
 # Q3.3
-class Node:
-    def __init__(self, value, next_node=None):
-        self.value = value
-        self.next = next_node
-
-    def __str__(self):
-        return str(self.value)
-
 
 def sortedMerge(a, b):  # This is the merging part like in normal merge sort.
     result = None
@@ -64,7 +55,7 @@ def sortedMerge(a, b):  # This is the merging part like in normal merge sort.
     if b == None:
         return a
 
-    # pick either a or b and recur..
+    # pick either a or b and recur...
     if a.value <= b.value:
         result = a
         result.next = sortedMerge(a.next, b)
@@ -130,3 +121,7 @@ if __name__ == '__main__':
     while tmp2 is not None:
         print(tmp2.value)
         tmp2 = tmp2.next
+
+
+# Time complexity O(nlog(n))
+# Space Complexity O(n)
