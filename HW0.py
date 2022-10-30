@@ -9,7 +9,7 @@ class Node:
         return str(self.value)
 
 
-def sortedMerge(a, b): # This is the merging part like in normal merge sort
+def sortedMerge(a, b): # This is the merging part like in normal merge sort.
     result = None
 
     # Base cases
