@@ -13,6 +13,15 @@ class TaxiProblem(search.Problem):
         """Don't forget to implement the goal test
         You should change the initial to your own representation.
         search.Problem.__init__(self, initial) creates the root node"""
+
+        map_shape = (len(initial[map]), len(initial[map][0]))
+        num_rows, num_cols = map_shape
+        self.number_of_taxis = len(initial['taxis'])
+        self.taxis_locations = []
+        for i in range(self.number_of_taxis):
+            self.taxis_locations.append(initial['taxis'][])
+
+
         search.Problem.__init__(self, initial)
         
     def actions(self, state):
@@ -20,6 +29,16 @@ class TaxiProblem(search.Problem):
         state. The result should be a tuple (or other iterable) of actions
         as defined in the problem description file"""
 
+        # return tuple of tuples of actions for each taxi
+        # loop over all taxis, check every action for each one and save all the possible
+        # combinations (cartesian multiplication).
+
+        all_actions = []
+
+
+        taxis_keys = list(state['taxis'].keys())
+        for i in range(self.number_of_taxis):
+            all_actions.append(check_possibility(state['taxis'][i]))
 
     def result(self, state, action):
         """Return the state that results from executing the given
