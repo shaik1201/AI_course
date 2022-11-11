@@ -20,6 +20,7 @@ class TaxiProblem(search.Problem):
         state. The result should be a tuple (or other iterable) of actions
         as defined in the problem description file"""
 
+
     def result(self, state, action):
         """Return the state that results from executing the given
         action in the given state. The action must be one of
