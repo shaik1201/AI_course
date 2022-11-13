@@ -5,9 +5,13 @@ import search
 import random
 import math
 import json
+import utils
 
 ids = ["206202384", "204864532"]
 
+
+def manhattan(a, b):
+    return sum(abs(val1 - val2) for val1, val2 in zip(a, b))
 
 class TaxiProblem(search.Problem):
     """This class implements a medical problem according to problem description file"""
@@ -36,9 +40,12 @@ class TaxiProblem(search.Problem):
         for taxi in list(initial['taxis'].keys()):
             initial['taxis'][taxi]['max_fuel'] = initial['taxis'][taxi]['fuel']
             initial['taxis'][taxi]['passenger aboard'] = 0
+            initial['taxis'][taxi]['names_passengers_aboard'] = []
 
         for passenger in list(initial['passengers'].keys()):
             initial['passengers'][passenger]['taxi name'] = None
+            initial['passengers'][passenger]['picked_up'] = False
+            initial['passengers'][passenger]['arrived_goal'] = False
 
         state = {
             'map': initial['map'],
@@ -50,7 +57,9 @@ class TaxiProblem(search.Problem):
             'number_of_passengers': len(initial['passengers']),
             'taxis_names': list(initial['taxis'].keys()),
             'passengers_names': list(initial['passengers'].keys()),
-            'goal_test_counter': 0
+            'goal_test_counter': 0,
+            'number_passengers_picked_up': 0,
+            'rounds': 0
         }
 
         state = json.dumps(state)
@@ -240,13 +249,19 @@ class TaxiProblem(search.Problem):
                     state['taxis'][taxi_name]['passenger aboard'] += 1
                     state['passengers'][passenger_name]['taxi name'] = taxi_name
                     state['taxis'][taxi_name]['capacity'] -= 1
+                    state['number_passengers_picked_up'] += 1
+                    state['passengers'][passenger_name]['picked_up'] = True
+                    state['taxis'][taxi_name]['names_passengers_aboard'].append(passenger_name)
                 elif taxi_action == 'drop off':
                     state['taxis'][taxi_name]['passenger aboard'] -= 1
                     state['passengers'][passenger_name]['location'] = state['passengers'][passenger_name]['destination']
                     state['passengers'][passenger_name]['taxi name'] = None
                     state['goal_test_counter'] += 1
                     state['taxis'][taxi_name]['capacity'] += 1
+                    state['passengers'][passenger_name]['arrived_goal'] = True
+                    state['taxis'][taxi_name]['names_passengers_aboard'].remove(passenger_name)
 
+        state['rounds'] += 1
         return json.dumps(state)
 
     def goal_test(self, state):
@@ -265,17 +280,106 @@ class TaxiProblem(search.Problem):
         """ This is the heuristic. It gets a node (not a state,
         state can be accessed via node.state)
         and returns a goal distance estimate"""
-        return 0
+
+        current_state = json.loads(node.state)
+
+        cycles_penalty = 0
+        if node.parent is not None:
+            # if there is 1 taxi
+            if len(node.action) == 1:
+                if node.action[0] == 'drop off':
+                    return -10
+                elif node.action[0] == 'move':
+                    parent = node.parent
+                    grand_parent = parent.parent
+                    if parent is not None and grand_parent is not None:
+                        grand_parent_state = json.loads(grand_parent.state)
+                        taxi_name = grand_parent_state['taxis'].keys()
+                        if grand_parent_state['taxis'][taxi_name]['location'] == current_state['taxis'][taxi_name]['location']:
+                            cycles_penalty += 10
+
+            else:
+                # if there is more than 1 taxi
+                for action in node.action:
+                    if action[0] == 'drop off':
+                        return -10
+                    elif node.action[0] == 'move':
+                        parent = node.parent
+                        grand_parent = parent.parent
+                        if parent is not None and grand_parent is not None:
+                            grand_parent_state = json.loads(grand_parent.state)
+                            taxi_name = action[1]
+                            if grand_parent_state['taxis'][taxi_name]['location'] == current_state['taxis'][taxi_name]['location']:
+                                cycles_penalty += 10
+
+        number_of_passengers = current_state['number_of_passengers']
+        number_of_passengers_picked_up = 0
+        for taxi in current_state['taxis']:
+            # print(current_state['taxis'][taxi]['passenger aboard'])
+            number_of_passengers_picked_up += current_state['taxis'][taxi]['passenger aboard']
+
+        distances_to_destinations = 0
+        distances_to_locations = 0
+        # distance from taxi to destination of passenger
+        if number_of_passengers_picked_up > 0:
+            for taxi_name in current_state['taxis'].keys():
+                taxi_location = current_state['taxis'][taxi_name]['location']
+                for passenger_name in current_state['taxis'][taxi_name]['names_passengers_aboard']:
+                    destination = current_state['passengers'][passenger_name]['destination']
+                    # tmp = utils.turn_heading(destination, current_state['rounds'] + 1, destination)
+                    distances_to_destinations += manhattan(tuple(taxi_location), tuple(destination))
+
+        # distances from taxis to unpicked passengers locations
+        for taxi_name in current_state['taxis'].keys():
+            taxi_location = current_state['taxis'][taxi_name]['location']
+            for passenger_name in current_state['passengers'].keys():
+                passenger_destination = current_state['passengers'][passenger_name]['destination']
+                if passenger_destination == current_state['passengers'][passenger_name]['location']:
+                    continue
+                else:
+                    location = current_state['passengers'][passenger_name]['location']
+                    # tmp = utils.turn_heading(location, current_state['rounds'] + 1, location)
+                    # print(f'taxi_location {taxi_location}, tmp {tmp}')
+                    distances_to_locations += manhattan(tuple(taxi_location), tuple(location))
+
+        penalty = distances_to_locations + (number_of_passengers_picked_up * 7) + (
+                number_of_passengers * 2) + distances_to_destinations + cycles_penalty + node.path_cost
+
+        return penalty
+
+
 
     def h_1(self, node):
         """
         This is a simple heuristic
         """
+        state = json.loads(node.state)
+        number_unpicked = state['number_of_passengers'] - state['number_passengers_picked_up']
+        number_picked_undelivered = state['number_passengers_picked_up'] - state['goal_test_counter']
+        number_taxis_in_problem = state['number_of_taxis']
+        return ((2 * number_unpicked) + number_picked_undelivered) / number_taxis_in_problem
+
+
 
     def h_2(self, node):
         """
         This is a slightly more sophisticated Manhattan heuristic
         """
+        state = json.loads(node.state)
+        D = []
+        T = []
+
+        for passenger in state['passengers']:
+            if state['passengers'][passenger]['picked_up'] == False and state['passengers'][passenger]['arrived_goal'] == False:
+                passenger_location = state['passengers'][passenger]['location']
+                passenger_destination = state['passengers'][passenger]['destination']
+                D.append(manhattan(passenger_location, passenger_destination))
+            if state['passengers'][passenger]['picked_up'] == True and state['passengers'][passenger]['arrived_goal'] == False:
+                passenger_location = state['passengers'][passenger]['location']
+                passenger_destination = state['passengers'][passenger]['destination']
+                T.append(manhattan(passenger_location, passenger_destination))
+
+        return (sum(D) + sum(T)) / state['number_of_taxis']
 
     """Feel free to add your own functions
     (-2, -2, None) means there was a timeout"""
