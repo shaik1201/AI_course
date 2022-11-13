@@ -33,6 +33,13 @@ class TaxiProblem(search.Problem):
         # for i in range(self.number_of_passengers):
         #     passengers_locations.append(initial['passengers'][self.passengers[i]]['location'])
 
+        for taxi in list(initial['taxis'].keys()):
+            initial['taxis'][taxi]['max_fuel'] = initial['taxis'][taxi]['fuel']
+            initial['taxis'][taxi]['passenger aboard'] = 0
+
+        for passenger in list(initial['passengers'].keys()):
+            initial['passengers'][passenger]['taxi name'] = None
+
         state = {
             'map': initial['map'],
             'taxis': initial['taxis'],
@@ -42,7 +49,8 @@ class TaxiProblem(search.Problem):
             'number_of_taxis': len(initial['taxis']),
             'number_of_passengers': len(initial['passengers']),
             'taxis_names': list(initial['taxis'].keys()),
-            'passengers_names': list(initial['passengers'].keys())
+            'passengers_names': list(initial['passengers'].keys()),
+            'goal_test_counter': 0
         }
 
         state = json.dumps(state)
@@ -73,7 +81,7 @@ class TaxiProblem(search.Problem):
             taxi_location = taxi[1]['location']
             taxi_fuel = taxi[1]['fuel']
             taxi_capacity = taxi[1]['capacity']
-            temp = self.check_actions(state, taxi_name, taxi_location, taxi_fuel,taxi_capacity)
+            temp = self.check_actions(state, taxi_name, taxi_location, taxi_fuel, taxi_capacity)
             all_actions.append(tuple(temp))
 
         all_actions = all_actions
@@ -82,7 +90,7 @@ class TaxiProblem(search.Problem):
         state = json.dumps(state)
         for act in all_actions:
             yield act
-
+            # i.e. act = (('wait', 'taxi 1'),)
 
     def check_actions(self, state, taxi_name, taxi_location, taxi_fuel, taxi_capacity):
         '''
@@ -102,11 +110,6 @@ class TaxiProblem(search.Problem):
         number_of_passengers = state['number_of_passengers']
         for i in range(number_of_passengers):
             passengers_locations.append(state['passengers'][state['passengers_names'][i]]['location'])
-
-        # following code doesn't check for drop off and refuel (each block needs to check these actions).
-        # also, do we need to update
-        # something in addition to adding to the actions list?
-        # i.e. lowering the taxi fuel when making a move.
 
         # add the wait action
         actions.append(('wait', taxi_name))
@@ -199,7 +202,7 @@ class TaxiProblem(search.Problem):
                 passenger_name2 = passenger[0]
 
         if passenger_name1 is not None and passenger_name2 is not None:
-            if passenger_name1 == passenger_name2:
+            if passenger_name1 == passenger_name2 and state['passengers'][passenger_name1]['taxi name'] is not None:
                 return passenger_name1
 
         return None
@@ -212,9 +215,51 @@ class TaxiProblem(search.Problem):
         # the state accordingly- decrease the taxi fuel and update its location in the state dict.
         # when pick-up or drop-off update the capacity.
 
+        state = copy.deepcopy(state)
+        state = json.loads(state)
+        # check how it should look like if there is only 1 taxi
+        for act in action:
+            taxi_name = act[1]
+            taxi_action = act[0]
+            if len(act) == 2:
+                if taxi_action == 'wait':
+                    continue
+                elif taxi_action == 'refuel':
+                    state['taxis'][taxi_name]['fuel'] = state['taxis'][taxi_name]['max_fuel']
+            elif len(act) == 3:
+                passenger_name = act[2]
+                if taxi_action == 'move':
+                    cords = act[2]
+                    state['taxis'][taxi_name]['fuel'] -= 1
+                    state['taxis'][taxi_name]['location'] = cords
+                    if state['taxis'][taxi_name]['passenger aboard'] > 0:
+                        for passenger in state['passengers']:
+                            if state['passengers'][passenger]['taxi name'] == taxi_name:
+                                state['passengers'][passenger]['location'] = cords
+                elif taxi_action == 'pick up':
+                    state['taxis'][taxi_name]['passenger aboard'] += 1
+                    state['passengers'][passenger_name]['taxi name'] = taxi_name
+                    state['taxis'][taxi_name]['capacity'] -= 1
+                elif taxi_action == 'drop off':
+                    state['taxis'][taxi_name]['passenger aboard'] -= 1
+                    state['passengers'][passenger_name]['location'] = state['passengers'][passenger_name]['destination']
+                    state['passengers'][passenger_name]['taxi name'] = None
+                    state['goal_test_counter'] += 1
+                    state['taxis'][taxi_name]['capacity'] += 1
+
+        return json.dumps(state)
+
     def goal_test(self, state):
         """ Given a state, checks if this is the goal state.
          Returns True if it is, False otherwise."""
+        state = copy.deepcopy(state)
+        state = json.loads(state)
+
+        if state['goal_test_counter'] == state['number_of_passengers']:
+            state = json.dumps(state)
+            return True
+        state = json.dumps(state)
+        return False
 
     def h(self, node):
         """ This is the heuristic. It gets a node (not a state,
