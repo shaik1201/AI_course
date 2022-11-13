@@ -1,4 +1,6 @@
 # import itertools
+import itertools
+
 import search
 import copy
 import json

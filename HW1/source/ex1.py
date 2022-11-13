@@ -1,4 +1,5 @@
 import copy
+import itertools
 
 import search
 import random
@@ -16,7 +17,7 @@ class TaxiProblem(search.Problem):
         You should change the initial to your own representation.
         search.Problem.__init__(self, initial) creates the root node"""
 
-        map_shape = (len(initial[map]), len(initial[map][0]))
+        # map_shape = (len(initial['map']), len(initial['map'][0]))
         # self.num_rows, self.num_cols = map_shape
         # self.map = initial['map']
         # self.number_of_taxis = len(initial['taxis'])
@@ -36,8 +37,8 @@ class TaxiProblem(search.Problem):
             'map': initial['map'],
             'taxis': initial['taxis'],
             'passengers': initial['passengers'],
-            'num_rows': len(initial[map]),
-            'num_cols': len(initial[map][0]),
+            'num_rows': len(initial['map']),
+            'num_cols': len(initial['map'][0]),
             'number_of_taxis': len(initial['taxis']),
             'number_of_passengers': len(initial['passengers']),
             'taxis_names': list(initial['taxis'].keys()),
@@ -72,13 +73,15 @@ class TaxiProblem(search.Problem):
             taxi_location = taxi[1]['location']
             taxi_fuel = taxi[1]['fuel']
             taxi_capacity = taxi[1]['capacity']
-            all_actions.append(self.check_actions(state, taxi_name, taxi_location, taxi_fuel,
-                                                  taxi_capacity))
+            temp = self.check_actions(state, taxi_name, taxi_location, taxi_fuel,taxi_capacity)
+            all_actions.append(tuple(temp))
 
-        all_actions = tuple(all_actions,) # problem - all actions not as we want
-
-        state = json.loads(state)
-        # don't forget to return the tuple of actions
+        all_actions = all_actions
+        all_actions = tuple(itertools.product(*all_actions))
+        # print(all_actions)
+        state = json.dumps(state)
+        for act in all_actions:
+            yield act
 
 
     def check_actions(self, state, taxi_name, taxi_location, taxi_fuel, taxi_capacity):
@@ -114,7 +117,7 @@ class TaxiProblem(search.Problem):
 
         # check if out of fuel
         if taxi_fuel <= 0:
-            return tuple(actions)
+            return actions
 
         # check for move actions
         # can go up
@@ -143,7 +146,7 @@ class TaxiProblem(search.Problem):
         if passenger_name_at_destination is not None:
             actions.append(('drop off', taxi_name, passenger_name_at_destination))
 
-        return tuple(actions)
+        return actions
 
     def check_passenger_for_pickup(self, state, cords):
         '''
