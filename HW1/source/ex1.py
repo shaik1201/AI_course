@@ -13,6 +13,9 @@ ids = ["206202384", "204864532"]
 def manhattan(a, b):
     return sum(abs(val1 - val2) for val1, val2 in zip(a, b))
 
+def euclidean(a, b):
+    return sum([(x - y) ** 2 for x, y in zip(a, b)]) ** 0.5
+
 class TaxiProblem(search.Problem):
     """This class implements a medical problem according to problem description file"""
 
@@ -381,8 +384,29 @@ class TaxiProblem(search.Problem):
 
         return (sum(D) + sum(T)) / state['number_of_taxis']
 
+
     """Feel free to add your own functions
     (-2, -2, None) means there was a timeout"""
+
+    def h_2_copy(self, node):
+        """
+        This is a slightly more sophisticated Manhattan heuristic
+        """
+        state = json.loads(node.state)
+        D = []
+        T = []
+
+        for passenger in state['passengers']:
+            if state['passengers'][passenger]['picked_up'] == False and state['passengers'][passenger]['arrived_goal'] == False:
+                passenger_location = state['passengers'][passenger]['location']
+                passenger_destination = state['passengers'][passenger]['destination']
+                D.append(euclidean(passenger_location, passenger_destination))
+            if state['passengers'][passenger]['picked_up'] == True and state['passengers'][passenger]['arrived_goal'] == False:
+                passenger_location = state['passengers'][passenger]['location']
+                passenger_destination = state['passengers'][passenger]['destination']
+                T.append(euclidean(passenger_location, passenger_destination))
+
+        return (sum(D) + sum(T)) / state['number_of_taxis']
 
 
 def create_taxi_problem(game):
