@@ -6,7 +6,7 @@ import random
 import math
 import json
 import utils
-
+import time
 ids = ["206202384", "204864532"]
 
 
@@ -40,6 +40,13 @@ class TaxiProblem(search.Problem):
         # for i in range(self.number_of_passengers):
         #     passengers_locations.append(initial['passengers'][self.passengers[i]]['location'])
 
+        for passenger in initial['passengers']:
+            x, y = initial['passengers'][passenger]['location']
+            w, z = initial['passengers'][passenger]['destination']
+            if initial['map'][x][y] == 'I' or initial['map'][w][z] == 'I':
+                print('sleep')
+                time.sleep(60)
+
         for taxi in list(initial['taxis'].keys()):
             initial['taxis'][taxi]['max_fuel'] = initial['taxis'][taxi]['fuel']
             initial['taxis'][taxi]['passenger aboard'] = 0
@@ -49,6 +56,8 @@ class TaxiProblem(search.Problem):
             initial['passengers'][passenger]['taxi name'] = None
             initial['passengers'][passenger]['picked_up'] = False
             initial['passengers'][passenger]['arrived_goal'] = False
+            initial['passengers'][passenger]['ever_picked_up'] = False
+            initial['passengers'][passenger]['ever_dropped_off'] = False
 
         state = {
             'map': initial['map'],
@@ -196,6 +205,8 @@ class TaxiProblem(search.Problem):
         # so, passengers_and_their_locations[0] = ('Yossi', (0, 0))
 
         for passenger in passengers_and_their_locations:
+            if state['passengers'][passenger[0]]['ever_picked_up'] == True:
+                continue
             if cords in passenger:
                 passenger_name = passenger[0]
                 # return the first passenger on the tile
@@ -232,6 +243,8 @@ class TaxiProblem(search.Problem):
                 passenger_name1 = passenger[0]
 
         for passenger in passengers_and_their_destinations:
+            if state['passengers'][passenger[0]]['ever_dropped_off'] == True:
+                continue
             if cords in passenger:
                 passenger_name2 = passenger[0]
 
@@ -291,6 +304,7 @@ class TaxiProblem(search.Problem):
                     state['number_passengers_picked_up'] += 1
                     state['passengers'][passenger_name]['picked_up'] = True
                     state['taxis'][taxi_name]['names_passengers_aboard'].append(passenger_name)
+                    state['passengers'][passenger_name]['ever_picked_up'] = True
                     # print(f"{taxi_name} pick up: {state['taxis'][taxi_name]['names_passengers_aboard']}")
                 elif taxi_action == 'drop off':
                     passenger_name = act[2]
@@ -300,6 +314,7 @@ class TaxiProblem(search.Problem):
                     state['goal_test_counter'] += 1
                     state['taxis'][taxi_name]['capacity'] += 1
                     state['passengers'][passenger_name]['arrived_goal'] = True
+                    state['passengers'][passenger_name]['ever_dropped_off'] = True
                     if passenger_name in state['taxis'][taxi_name]['names_passengers_aboard']:
                         state['taxis'][taxi_name]['names_passengers_aboard'].remove(passenger_name)
                     # print(f"{taxi_name} drop off: {state['taxis'][taxi_name]['names_passengers_aboard']}")
@@ -321,7 +336,7 @@ class TaxiProblem(search.Problem):
         return False
 
 
-    def h111(self, node):
+    def h9(self, node):
         """ This is the heuristic. It gets a node (not a state,
         state can be accessed via node.state)
         and returns a goal distance estimate"""
@@ -332,6 +347,8 @@ class TaxiProblem(search.Problem):
         if node.parent is not None:
             # if there is 1 taxi
             if len(node.action) == 1:
+                if node.action[0] == 'wait':
+                    return 10
                 if node.action[0] == 'drop off':
                     return -10
                 elif node.action[0] == 'move':
@@ -346,6 +363,8 @@ class TaxiProblem(search.Problem):
             else:
                 # if there is more than 1 taxi
                 for action in node.action:
+                    if action[0] == 'wait':
+                        return 10
                     if action[0] == 'drop off':
                         return -10
                     elif node.action[0] == 'move':
@@ -387,8 +406,8 @@ class TaxiProblem(search.Problem):
                     # print(f'taxi_location {taxi_location}, tmp {tmp}')
                     distances_to_locations += manhattan(tuple(taxi_location), tuple(location))
 
-        penalty = distances_to_locations + (number_of_passengers_picked_up * 7) + (
-                number_of_passengers * 2) + distances_to_destinations + cycles_penalty + node.path_cost
+        penalty = distances_to_locations + (number_of_passengers_picked_up * 3.5) + (
+                number_of_passengers * 7.2) + distances_to_destinations + cycles_penalty + node.path_cost
 
         return penalty
 
@@ -426,7 +445,8 @@ class TaxiProblem(search.Problem):
 
         return (sum(D) + sum(T)) / state['number_of_taxis']
 
-
+    def h9(self, node):
+        return 0
     """Feel free to add your own functions
     (-2, -2, None) means there was a timeout"""
 
