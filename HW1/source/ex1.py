@@ -88,6 +88,7 @@ class TaxiProblem(search.Problem):
         taxis = [(k, v) for k, v in state['taxis'].items()]
         # i.e. taxis = [('taxi 1', {'location': (3, 3), 'fuel': 15, 'capacity': 2})]
         all_actions = []
+        taxis = utils.shuffled(state['taxis'].items())
         for taxi in taxis:
             taxi_name = taxi[0]
             taxi_location = taxi[1]['location']
@@ -96,11 +97,27 @@ class TaxiProblem(search.Problem):
             temp = self.check_actions(state, taxi_name, taxi_location, taxi_fuel, taxi_capacity)
             all_actions.append(tuple(temp))
 
-        all_actions = all_actions
-        all_actions = tuple(itertools.product(*all_actions))
-        # print(all_actions)
+        all_actions = list(itertools.product(*all_actions))
+        all_actions_copy = copy.deepcopy(all_actions)
+        for actions in all_actions:
+            for act in actions:
+                if act[0] == 'move':
+                    for act2 in actions:
+                        #check if it's the same taxi
+                        if act[1] == act2[1]:
+                            continue
+                        # first case:
+                        # if taxi a and taxi b want to move to the same tile
+                        if (act2[0] == 'wait' or act2[0] == 'refuel' or act2[0] == 'pick uo' or act2[0] == 'drop off') and act[2] == state["taxis"][act2[1]]["location"]:
+                            all_actions = all_actions_copy.remove(actions)
+                            break
+                        if act2[0] == 'move':
+                            if act[2] == act2[2]:
+                                all_actions = all_actions_copy.remove(actions)
+                                break
+                break
         state = json.dumps(state)
-        for act in all_actions:
+        for act in all_actions_copy:
             yield act
             # i.e. act = (('wait', 'taxi 1'),)
 
@@ -136,34 +153,35 @@ class TaxiProblem(search.Problem):
 
         # check for move actions
         # can go up
-        if x - 1 >= 0 and state['map'][x - 1][y] != 'I' and (x - 1, y) not in taxis_locations:
+        if x - 1 >= 0 and state['map'][x - 1][y] != 'I' and (x - 1, y):
             actions.append(('move', taxi_name, (x - 1, y)))
 
         # can go down
-        if x + 1 < M and state['map'][x + 1][y] != 'I' and (x + 1, y) not in taxis_locations:
+        if x + 1 < M and state['map'][x + 1][y] != 'I' and (x + 1, y):
             actions.append(('move', taxi_name, (x + 1, y)))
 
         # can go left
-        if y - 1 >= 0 and state['map'][x][y - 1] != 'I' and (x, y - 1) not in taxis_locations:
+        if y - 1 >= 0 and state['map'][x][y - 1] != 'I' and (x, y - 1):
             actions.append(('move', taxi_name, (x, y - 1)))
 
         # can go right
-        if y + 1 < N and state['map'][x][y + 1] != 'I' and (x, y + 1) not in taxis_locations:
+        if y + 1 < N and state['map'][x][y + 1] != 'I' and (x, y + 1):
             actions.append(('move', taxi_name, (x, y + 1)))
 
         # check for pick-up actions
         if taxi_location in passengers_locations and taxi_capacity > 0:
-            passenger_name = self.check_passenger_for_pickup(state, taxi_location)
-            actions.append(('pick up', taxi_name, passenger_name))
+            passenger_name = self.check_passenger_for_pickup(state,taxi_name, taxi_location)
+            if passenger_name is not None:
+                actions.append(('pick up', taxi_name, passenger_name))
 
         # check for drop-off actions
-        passenger_name_at_destination = self.check_passenger_for_dropoff(state, taxi_location)
+        passenger_name_at_destination = self.check_passenger_for_dropoff(state, taxi_name, taxi_location)
         if passenger_name_at_destination is not None:
             actions.append(('drop off', taxi_name, passenger_name_at_destination))
 
-        return actions
+        return utils.shuffled(actions)
 
-    def check_passenger_for_pickup(self, state, cords):
+    def check_passenger_for_pickup(self, state, taxi_name, cords):
         '''
         check if there is a passenger on the specified cords
         '''
@@ -181,10 +199,13 @@ class TaxiProblem(search.Problem):
             if cords in passenger:
                 passenger_name = passenger[0]
                 # return the first passenger on the tile
+
+                if passenger_name in state["taxis"][taxi_name]["names_passengers_aboard"]:
+                    return None
                 return passenger_name
         return None
 
-    def check_passenger_for_dropoff(self, state, cords):
+    def check_passenger_for_dropoff(self, state, taxi_name, cords):
         '''
         return the passenger name if he is at his destination
         '''
@@ -199,9 +220,10 @@ class TaxiProblem(search.Problem):
             passengers_destinations.append(state['passengers'][passengers[i]]['destination'])
 
         passengers_and_their_locations = zip(passengers, passengers_locations)
-        passengers_and_their_destinations = zip(passengers, passengers_destinations)
         # i.e. [('Yossi', (0, 0)), ('Moshe', (3, 1))]
         # so, passengers_and_their_locations[0] = ('Yossi', (0, 0))
+        passengers_and_their_destinations = zip(passengers, passengers_destinations)
+
 
         passenger_name1, passenger_name2 = None, None
 
@@ -215,7 +237,10 @@ class TaxiProblem(search.Problem):
 
         if passenger_name1 is not None and passenger_name2 is not None:
             if passenger_name1 == passenger_name2 and state['passengers'][passenger_name1]['taxi name'] is not None:
-                return passenger_name1
+                if passenger_name1 in state['taxis'][taxi_name]['names_passengers_aboard']:
+                    return passenger_name1
+
+
 
         return None
 
@@ -233,36 +258,52 @@ class TaxiProblem(search.Problem):
         for act in action:
             taxi_name = act[1]
             taxi_action = act[0]
+            # if taxi_action == "wait":
+            #     print(f"{taxi_name} wait")
+            # if taxi_action == 'move':
+            #     print(f"{taxi_name} moved from {state['taxis'][taxi_name]['location']} to {act[2]}")
+            # if taxi_action == 'pick up':
+            #     print(f"{taxi_name} picked up: {state['taxis'][taxi_name]['names_passengers_aboard']}")
+            # if taxi_action == 'drop off':
+            #     print(f"{taxi_name} droped off: {state['taxis'][taxi_name]['names_passengers_aboard']}")
             if len(act) == 2:
                 if taxi_action == 'wait':
                     continue
                 elif taxi_action == 'refuel':
                     state['taxis'][taxi_name]['fuel'] = state['taxis'][taxi_name]['max_fuel']
             elif len(act) == 3:
-                passenger_name = act[2]
                 if taxi_action == 'move':
                     cords = act[2]
                     state['taxis'][taxi_name]['fuel'] -= 1
+                    # print(f"{taxi_name} moved from {state['taxis'][taxi_name]['location']} to {cords}")
                     state['taxis'][taxi_name]['location'] = cords
                     if state['taxis'][taxi_name]['passenger aboard'] > 0:
                         for passenger in state['passengers']:
                             if state['passengers'][passenger]['taxi name'] == taxi_name:
                                 state['passengers'][passenger]['location'] = cords
                 elif taxi_action == 'pick up':
+                    # print(state['taxis'][taxi_name]['location'])
+                    # print(act)
+                    passenger_name = act[2]
                     state['taxis'][taxi_name]['passenger aboard'] += 1
                     state['passengers'][passenger_name]['taxi name'] = taxi_name
                     state['taxis'][taxi_name]['capacity'] -= 1
                     state['number_passengers_picked_up'] += 1
                     state['passengers'][passenger_name]['picked_up'] = True
                     state['taxis'][taxi_name]['names_passengers_aboard'].append(passenger_name)
+                    # print(f"{taxi_name} pick up: {state['taxis'][taxi_name]['names_passengers_aboard']}")
                 elif taxi_action == 'drop off':
+                    passenger_name = act[2]
                     state['taxis'][taxi_name]['passenger aboard'] -= 1
                     state['passengers'][passenger_name]['location'] = state['passengers'][passenger_name]['destination']
                     state['passengers'][passenger_name]['taxi name'] = None
                     state['goal_test_counter'] += 1
                     state['taxis'][taxi_name]['capacity'] += 1
                     state['passengers'][passenger_name]['arrived_goal'] = True
-                    state['taxis'][taxi_name]['names_passengers_aboard'].remove(passenger_name)
+                    if passenger_name in state['taxis'][taxi_name]['names_passengers_aboard']:
+                        state['taxis'][taxi_name]['names_passengers_aboard'].remove(passenger_name)
+                    # print(f"{taxi_name} drop off: {state['taxis'][taxi_name]['names_passengers_aboard']}")
+
 
         state['rounds'] += 1
         return json.dumps(state)
@@ -279,7 +320,8 @@ class TaxiProblem(search.Problem):
         state = json.dumps(state)
         return False
 
-    def h(self, node):
+
+    def h111(self, node):
         """ This is the heuristic. It gets a node (not a state,
         state can be accessed via node.state)
         and returns a goal distance estimate"""
@@ -364,7 +406,7 @@ class TaxiProblem(search.Problem):
 
 
 
-    def h_2(self, node):
+    def h(self, node):
         """
         This is a slightly more sophisticated Manhattan heuristic
         """

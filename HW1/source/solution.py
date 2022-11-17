@@ -208,7 +208,7 @@ class DroneProblem(search.Problem):
         # print(penalty)
         return penalty
 
-    def _h1_copy(self, node):
+    def h1_copy(self, node):
         """
         Best h so far
         :param node:
