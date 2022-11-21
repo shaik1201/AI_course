@@ -522,6 +522,7 @@ class TaxiProblem(search.Problem):
         initial['rounds'] = 0
         initial['number_of_taxis'] = len(initial['taxis'])
         initial['number_passengers_picked_up'] = 0
+
         initial['taxis_locations'] = []
         initial['passengers_locations'] = []
         initial['passengers_destinations'] = []
@@ -534,6 +535,7 @@ class TaxiProblem(search.Problem):
         for taxi in list(initial['taxis'].keys()):
             initial['taxis'][taxi]['max_fuel'] = initial['taxis'][taxi]['fuel']
             initial['taxis'][taxi]['max_capacity'] = initial['taxis'][taxi]['capacity']
+
             initial['taxis'][taxi]['names_passengers_aboard'] = []
             initial['taxis_locations'].append(initial['taxis'][taxi]['location'])
 
@@ -622,6 +624,7 @@ class TaxiProblem(search.Problem):
         taxi_name = taxi[0]
         taxi_location = taxi[1]['location']
         taxi_fuel = taxi[1]['fuel']
+        taxi_max_fuel = taxi[1]['max_fuel']
         taxi_capacity = taxi[1]['capacity']
         taxi_max_capacity = taxi[1]['max_capacity']
         x, y = taxi_location
@@ -634,7 +637,7 @@ class TaxiProblem(search.Problem):
         actions.append(('wait', taxi_name))
 
         # check for refuel
-        if state['map'][x][y] == 'G':
+        if state['map'][x][y] == 'G' and state['taxis'][taxi_name]['fuel'] != state['taxis'][taxi_name]['max_fuel']:
             actions.append(('refuel', taxi_name))
 
         # check if out of fuel
@@ -709,7 +712,7 @@ class TaxiProblem(search.Problem):
                     state['number_passengers_picked_up'] += 1
                     state['taxis'][taxi_name]['names_passengers_aboard'].append(passenger_name)
                     ###
-                    state['unpicked_passengers_list'].remove(passenger_name)
+                    # state['unpicked_passengers_list'].remove(passenger_name)
                     ###
                 elif taxi_action == 'drop off':
                     passenger_name = act[2]
@@ -725,13 +728,17 @@ class TaxiProblem(search.Problem):
         """ Given a state, checks if this is the goal state.
          Returns True if it is, False otherwise."""
         state = json.loads(state)
+
+        # print(state['goal_test_counter'])
+        # print(state['total_number_passengers'])
+        # print()
         if state['goal_test_counter'] == state['total_number_passengers']:
             state = json.dumps(state)
             return True
         state = json.dumps(state)
         return False
 
-    def h99(self, node):
+    def h(self, node):
         """ This is the heuristic. It gets a node (not a state,
         state can be accessed via node.state)
         and returns a goal distance estimate"""
@@ -821,7 +828,7 @@ class TaxiProblem(search.Problem):
         number_taxis_in_problem = state['number_of_taxis']
         return ((2 * number_unpicked) + number_picked_undelivered) / number_taxis_in_problem
 
-    def h(self, node):
+    def h_2(self, node):
         """
         This is a slightly more sophisticated Manhattan heuristic
         """
@@ -929,6 +936,17 @@ class TaxiProblem(search.Problem):
         return curr_state['number_passengers_picked_up'] + passengers_number + circles + node.path_cost + distances + penalty
 
 
+    def h_final(self, node):
+        state = json.loads(node.state)
+        num_taxis = state['number_of_taxis']
+        if num_taxis == 1:
+
+
+        elif num_taxis == 2:
+            pass
+
+        else:
+            return self.use_manhattan(state, penalty=0)
 
 
     def use_manhattan(self, state, penalty):
