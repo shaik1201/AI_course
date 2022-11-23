@@ -1,6 +1,8 @@
 import copy
 import itertools
 
+import networkx as nx
+
 import search
 import random
 import math
@@ -211,7 +213,11 @@ class TaxiProblem(search.Problem):
             initial['initial_passengers_locations'].append(initial['passengers'][passenger]['location'])
             initial['passengers_destinations'].append(initial['passengers'][passenger]['destination'])
 
-
+        game_map = initial['map']
+        passengers = initial['passengers']
+        self.update_map(game_map, passengers)
+        G = self.build_graph(game_map)
+        self.short_distances = self.create_shortest_path_distances(G)
         # state = copy.deepcopy(initial)
         state = json.dumps(initial)
         # build new initial dictionary with new props
@@ -371,7 +377,7 @@ class TaxiProblem(search.Problem):
                     state['number_passengers_picked_up'] += 1
                     state['taxis'][taxi_name]['names_passengers_aboard'].append(passenger_name)
                     ###
-                    state['unpicked_passengers_list'].remove(passenger_name)
+                    #state['unpicked_passengers_list'].remove(passenger_name)
                     ###
                 elif taxi_action == 'drop off':
                     passenger_name = act[2]
@@ -397,7 +403,15 @@ class TaxiProblem(search.Problem):
         state = json.dumps(state)
         return False
 
-    def h1111111(self, node):
+    def taxis_can_pick_up(self, state, taxi_name):
+        """
+        Checks if the specific drone can pick up another package
+        :param drone_name: specific drone
+        :return: True if possible, False otherwise
+        """
+        return state['taxis'][taxi_name]['capacity'] < state['taxis'][taxi_name]['max_capacity']
+
+    def h(self, node):
         """ This is the heuristic. It gets a node (not a state,
         state can be accessed via node.state)
         and returns a goal distance estimate"""
@@ -409,9 +423,9 @@ class TaxiProblem(search.Problem):
             # if there is 1 taxi
             if len(node.action) == 1:
                 if node.action[0] == 'wait':
-                    return 15
+                    return 10
                 if node.action[0] == 'drop off':
-                    return -20
+                    return -10
                 elif node.action[0] == 'move':
                     parent = node.parent
                     grand_parent = parent.parent
@@ -435,8 +449,7 @@ class TaxiProblem(search.Problem):
                         if parent is not None and grand_parent is not None:
                             grand_parent_state = json.loads(grand_parent.state)
                             taxi_name = action[1]
-                            if grand_parent_state['taxis'][taxi_name]['location'] == current_state['taxis'][taxi_name][
-                                'location']:
+                            if grand_parent_state['taxis'][taxi_name]['location'] == current_state['taxis'][taxi_name]['location']:
                                 cycles_penalty += 10
 
         number_of_passengers = current_state['total_number_passengers']
@@ -444,27 +457,34 @@ class TaxiProblem(search.Problem):
 
         distances_to_destinations = 0
         distances_to_locations = 0
+
         # distance from taxi to destination of passenger
         if number_of_passengers_picked_up > 0:
             for taxi_name in current_state['taxis'].keys():
                 taxi_location = current_state['taxis'][taxi_name]['location']
                 for passenger_name in current_state['taxis'][taxi_name]['names_passengers_aboard']:
-                    destination = current_state['passengers'][passenger_name]['destination']
-                    # tmp = utils.turn_heading(destination, current_state['rounds'] + 1, destination)
-                    distances_to_destinations += manhattan(tuple(taxi_location), tuple(destination))
+                    passenger_destination = current_state['passengers'][passenger_name]['destination']
+                    key = (tuple(taxi_location), tuple(passenger_destination))
+                    if key in self.short_distances:
+                        distances_to_destinations += self.short_distances[key]
+                    # if distances_to_destinations == 0:#means that we can't arrive to the destination
+                    #     # bonus for intersection with client
+                    #     distances_to_destinations -= 1
+
 
         # distances from taxis to unpicked passengers locations
         for taxi_name in current_state['taxis'].keys():
             taxi_location = current_state['taxis'][taxi_name]['location']
+            if not self.taxis_can_pick_up(current_state, taxi_name):
+                continue
             for passenger_name in current_state['passengers'].keys():
-                passenger_destination = current_state['passengers'][passenger_name]['destination']
-                if passenger_destination == current_state['passengers'][passenger_name]['location']:
-                    continue
-                else:
-                    location = current_state['passengers'][passenger_name]['location']
-                    # tmp = utils.turn_heading(location, current_state['rounds'] + 1, location)
-                    # print(f'taxi_location {taxi_location}, tmp {tmp}')
-                    distances_to_locations += manhattan(tuple(taxi_location), tuple(location))
+                passenger_location = current_state['passengers'][passenger_name]['location']
+                key = (tuple(taxi_location), tuple(passenger_location))
+                if key in self.short_distances:
+                    distances_to_locations += self.short_distances[key]
+                # if distances_to_locations == 0:
+                #     # bonus for intersection with client
+                #     distances_to_locations -= 1
 
         penalty = distances_to_locations + (number_of_passengers_picked_up * 3.5) + (
                 number_of_passengers * 7.2) + distances_to_destinations + cycles_penalty + node.path_cost
@@ -517,7 +537,7 @@ class TaxiProblem(search.Problem):
 
         return (sum(D) + sum(T)) / state['number_of_taxis']
 
-    def h(self, node):
+    def hShai(self, node):
         penalty = 0
         circles = 0
         curr_state = json.loads(node.state)
@@ -582,7 +602,7 @@ class TaxiProblem(search.Problem):
         return curr_state['number_passengers_picked_up'] + passengers_number + circles + node.path_cost + distances + penalty
 
 
-    def h(self, node):
+    def h_notGood(self, node):
         state = json.loads(node.state)
         M = len(state['map'])
         N = len(state['map'][0])
@@ -672,6 +692,45 @@ class TaxiProblem(search.Problem):
                         if act[2] in [(1,2), (1,3), (1,4), (2,4), (3,4), (4,4), (4,3), (4,2), (3,2), (4,1), (4,0), (3,0), (2,0), (2,1), (3,1)]:
                             score -= 100
         return score
+
+    def update_map(self, game_map, packages):
+        """
+        Updates the map with the given packages, increment the amount of packages in the specific cell.
+        """
+        for x, y in packages.values():
+            if game_map[x][y] == 'I':
+                continue
+            if game_map[x][y] == 'P' or game_map[x][y] == 'G':
+                game_map[x][y] = 1
+            else:
+                game_map[x][y] += 1
+    def build_graph(self, game_map):
+        G = nx.Graph()
+        rows, cols = len(game_map), len(game_map[0])
+        for i in range(rows):
+            for j in range(cols):
+                if game_map[i][j] == 'I':
+                    continue
+                # edge from (i,j) to its adjacent: (i+1,j), (i-1,j), (i,j+1), (i,j-1)
+                if i + 1 < rows and game_map[i + 1][j] != 'I':
+                    G.add_edge((i, j), (i + 1, j))
+                if i - 1 >= 0 and game_map[i - 1][j] != 'I':
+                    G.add_edge((i, j), (i - 1, j))
+                if j + 1 < cols and game_map[i][j + 1] != 'I':
+                    G.add_edge((i, j), (i, j + 1))
+                if j - 1 >= 0 and game_map[i][j - 1] != 'I':
+                    G.add_edge((i, j), (i, j - 1))
+        return G
+
+    def create_shortest_path_distances(self, G):
+        d = {}
+        for n1 in G.nodes:
+            for n2 in G.nodes:
+                if n1 == n2:
+                    continue
+                d[(n1, n2)] = len(nx.shortest_path(G, n1, n2)) - 1
+        print(d)
+        return d
 
 def create_taxi_problem(game):
     return TaxiProblem(game)
