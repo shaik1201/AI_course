@@ -95,6 +95,72 @@ def distance_with_I(state, a, b):
             one_side_dist += 1
             x += 1
 
+    # check second side
+    if x_a > x_b and y_a < y_b:
+        x = x_a
+        y = y_a
+        while y <= y_b:
+            one_side_list.append(map[x_b][y])
+            one_side_dist += 1
+            y += 1
+        while x >= x_b:
+            one_side_list.append(map[x][y_a])
+            one_side_dist += 1
+            x -= 1
+    elif x_a == x_b and y_a < y_b:
+        y = y_a
+        while y <= y_b:
+            one_side_list.append(map[x_b][y])
+            one_side_dist += 1
+            y += 1
+    elif x_a < x_b and y_a < y_b:
+        x = x_a
+        y = y_a
+        while y <= y_b:
+            one_side_list.append(map[x_b][y])
+            one_side_dist += 1
+            y += 1
+        while x <= x_b:
+            one_side_list.append(map[x][y_a])
+            one_side_dist += 1
+            x += 1
+    elif x_a < x_b and y_a == y_b:
+        x = x_a
+        while x <= x_b:
+            one_side_list.append(map[x][y_a])
+            one_side_dist += 1
+            x += 1
+
+
+    elif x_a > x_b and y_a > y_b:
+        x = x_a
+        y = y_a
+        while y >= y_b:
+            one_side_list.append(map[x_b][y])
+            one_side_dist += 1
+            y -= 1
+        while x >= x_b:
+            one_side_list.append(map[x][y_a])
+            one_side_dist += 1
+            x -= 1
+    elif x_a == x_b and y_a > y_b:
+        y = y_a
+        while y >= y_b:
+            one_side_list.append(map[x_b][y])
+            one_side_dist += 1
+            y -= 1
+    elif x_a < x_b and y_a > y_b:
+        x = x_a
+        y = y_a
+        while y >= y_b:
+            one_side_list.append(map[x_b][y])
+            one_side_dist += 1
+            y -= 1
+        while x <= x_b:
+            one_side_list.append(map[x][y_a])
+            one_side_dist += 1
+            x += 1
+
 
 
 
