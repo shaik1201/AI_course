@@ -14,15 +14,10 @@ import logging
 # import numpy as np
 import statistics
 
-
 ids = ["206202384", "204864532"]
 
 
-def manhattan(a, b):
-    return sum(abs(val1 - val2) for val1, val2 in zip(a, b))
-
-def distance_with_I(state, a, b):
-    map = state['map']
+def distance_with_I(map, a, b):
     x_a = a[0]
     y_a = a[1]
     x_b = b[0]
@@ -35,135 +30,178 @@ def distance_with_I(state, a, b):
     if x_a > x_b and y_a < y_b:
         x = x_a
         y = y_a
-        while y <= y_b:
-            one_side_list.append(map[x_b][y])
-            one_side_dist += 1
+        while y < y_b:
             y += 1
-        while x >= x_b:
-            one_side_list.append(map[x][y_a])
+            one_side_list.append(map[x][y])
             one_side_dist += 1
+
+        while x > x_b:
             x -= 1
-    elif x_a == x_b and y_a < y_b:
-        y = y_a
-        while y <= y_b:
-            one_side_list.append(map[x_b][y])
+            one_side_list.append(map[x][y])
             one_side_dist += 1
+
+
+    elif x_a == x_b and y_a < y_b:
+        x = x_a
+        y = y_a
+        while y < y_b:
             y += 1
+            one_side_list.append(map[x][y])
+            one_side_dist += 1
+            second_side_list.append(map[x][y])
+            second_side_dist += 1
+
+
+
     elif x_a < x_b and y_a < y_b:
         x = x_a
         y = y_a
-        while y <= y_b:
-            one_side_list.append(map[x_b][y])
-            one_side_dist += 1
+        while y < y_b:
             y += 1
-        while x <= x_b:
-            one_side_list.append(map[x][y_a])
+            one_side_list.append(map[x][y])
             one_side_dist += 1
+
+        while x < x_b:
             x += 1
+            one_side_list.append(map[x][y])
+            one_side_dist += 1
+
+
     elif x_a < x_b and y_a == y_b:
         x = x_a
-        while x <= x_b:
-            one_side_list.append(map[x][y_a])
-            one_side_dist += 1
+        y = y_a
+        while x < x_b:
             x += 1
+            one_side_list.append(map[x][y])
+            one_side_dist += 1
+
+
+    elif x_a > x_b and y_a == y_b:
+        x = x_a
+        y = y_a
+        while x > x_b:
+            x -= 1
+            one_side_list.append(map[x][y])
+            one_side_dist += 1
+            second_side_list.append(map[x][y])
+            second_side_dist += 1
+
 
 
     elif x_a > x_b and y_a > y_b:
         x = x_a
         y = y_a
-        while y >= y_b:
-            one_side_list.append(map[x_b][y])
-            one_side_dist += 1
+        while y > y_b:
             y -= 1
-        while x >= x_b:
-            one_side_list.append(map[x][y_a])
+            one_side_list.append(map[x][y])
             one_side_dist += 1
+        while x > x_b:
             x -= 1
+            one_side_list.append(map[x][y])
+            one_side_dist += 1
+
     elif x_a == x_b and y_a > y_b:
         y = y_a
-        while y >= y_b:
-            one_side_list.append(map[x_b][y])
-            one_side_dist += 1
+        x = x_a
+        while y > y_b:
             y -= 1
+            one_side_list.append(map[x][y])
+            one_side_dist += 1
+            second_side_list.append(map[x][y])
+            second_side_dist += 1
+
     elif x_a < x_b and y_a > y_b:
         x = x_a
         y = y_a
-        while y >= y_b:
-            one_side_list.append(map[x_b][y])
-            one_side_dist += 1
+        while y > y_b:
             y -= 1
-        while x <= x_b:
-            one_side_list.append(map[x][y_a])
+            one_side_list.append(map[x][y])
             one_side_dist += 1
+
+        while x < x_b:
             x += 1
+            one_side_list.append(map[x][y])
+            one_side_dist += 1
 
     # check second side
     if x_a > x_b and y_a < y_b:
         x = x_a
         y = y_a
-        while y <= y_b:
-            one_side_list.append(map[x_b][y])
-            one_side_dist += 1
-            y += 1
-        while x >= x_b:
-            one_side_list.append(map[x][y_a])
-            one_side_dist += 1
+        while x > x_b:
             x -= 1
-    elif x_a == x_b and y_a < y_b:
-        y = y_a
-        while y <= y_b:
-            one_side_list.append(map[x_b][y])
-            one_side_dist += 1
+            second_side_list.append(map[x][y])
+            second_side_dist += 1
+
+        while y < y_b:
             y += 1
+            second_side_list.append(map[x][y])
+            second_side_dist += 1
+
+
     elif x_a < x_b and y_a < y_b:
         x = x_a
         y = y_a
-        while y <= y_b:
-            one_side_list.append(map[x_b][y])
-            one_side_dist += 1
-            y += 1
-        while x <= x_b:
-            one_side_list.append(map[x][y_a])
-            one_side_dist += 1
+        while x < x_b:
             x += 1
+            second_side_list.append(map[x][y])
+            second_side_dist += 1
+
+        while y < y_b:
+            y += 1
+            second_side_list.append(map[x_b][y])
+            second_side_dist += 1
+
+
     elif x_a < x_b and y_a == y_b:
         x = x_a
-        while x <= x_b:
-            one_side_list.append(map[x][y_a])
-            one_side_dist += 1
+        y = y_a
+        while x < x_b:
             x += 1
+            second_side_list.append(map[x][y])
+            second_side_dist += 1
 
 
     elif x_a > x_b and y_a > y_b:
         x = x_a
         y = y_a
-        while y >= y_b:
-            one_side_list.append(map[x_b][y])
-            one_side_dist += 1
-            y -= 1
-        while x >= x_b:
-            one_side_list.append(map[x][y_a])
-            one_side_dist += 1
+        while x > x_b:
             x -= 1
-    elif x_a == x_b and y_a > y_b:
-        y = y_a
-        while y >= y_b:
-            one_side_list.append(map[x_b][y])
-            one_side_dist += 1
+            second_side_list.append(map[x][y])
+            second_side_dist += 1
+        while y > y_b:
             y -= 1
+            second_side_list.append(map[x][y])
+            second_side_dist += 1
+
     elif x_a < x_b and y_a > y_b:
         x = x_a
         y = y_a
-        while y >= y_b:
-            one_side_list.append(map[x_b][y])
-            one_side_dist += 1
-            y -= 1
-        while x <= x_b:
-            one_side_list.append(map[x][y_a])
-            one_side_dist += 1
+        while x < x_b:
             x += 1
+            second_side_list.append(map[x][y])
+            second_side_dist += 1
+
+        while y > y_b:
+            y -= 1
+            second_side_list.append(map[x][y])
+            one_side_dist += 1
+
+    # check if there is I on the way
+    for i in one_side_list:
+        if i == 'I':
+            one_side_dist += 2
+            break
+
+    for i in second_side_list:
+        if i == 'I':
+            second_side_dist += 2
+            break
+
+    return min(one_side_dist, second_side_dist)
 
 
+def manhattan(a, b):
+    return sum(abs(val1 - val2) for val1, val2 in zip(a, b))
 
 
 def euclidean(a, b):
@@ -185,40 +223,21 @@ class TaxiProblem(search.Problem):
             initial['passengers'][passenger_name]['dropped_off'] = False
             initial['names_passengers'].append(passenger_name)
             count_nb_passengers += 1
-        initial['total_number_passengers'] = count_nb_passengers
-        initial['goal_test_counter'] = 0
-        initial['num_rows'] = len(initial['map'])
-        initial['num_cols'] = len(initial['map'][0])
-        initial['rounds'] = 0
-        initial['number_of_taxis'] = len(initial['taxis'])
-        initial['number_passengers_picked_up'] = 0
-
-        initial['taxis_locations'] = []
-        initial['initial_passengers_locations'] = []
-        initial['passengers_destinations'] = []
-        initial['taxis_names'] = list(initial['taxis'].keys())
-        initial['passengers_names'] = list(initial['passengers'].keys())
-        initial['unpicked_passengers_list'] = list(initial['passengers'].keys())
-
-
 
         for taxi in list(initial['taxis'].keys()):
             initial['taxis'][taxi]['max_fuel'] = initial['taxis'][taxi]['fuel']
             initial['taxis'][taxi]['max_capacity'] = initial['taxis'][taxi]['capacity']
-
             initial['taxis'][taxi]['names_passengers_aboard'] = []
-            initial['taxis_locations'].append(initial['taxis'][taxi]['location'])
+            initial['taxis'][taxi]['ever_fueled'] = False
 
-        for passenger in list(initial['passengers'].keys()):
-            initial['initial_passengers_locations'].append(initial['passengers'][passenger]['location'])
-            initial['passengers_destinations'].append(initial['passengers'][passenger]['destination'])
+        initial['total_number_passengers'] = count_nb_passengers
+        initial['goal_test_counter'] = 0
+        initial['num_rows'] = len(initial['map'])
+        initial['num_cols'] = len(initial['map'][0])
+        # initial['rounds'] = 0
+        initial['number_of_taxis'] = len(initial['taxis'])
+        initial['number_passengers_picked_up'] = 0
 
-        game_map = initial['map']
-        passengers = initial['passengers']
-        self.update_map(game_map, passengers)
-        G = self.build_graph(game_map)
-        self.short_distances = self.create_shortest_path_distances(G)
-        # state = copy.deepcopy(initial)
         state = json.dumps(initial)
         # build new initial dictionary with new props
         search.Problem.__init__(self, state)
@@ -362,6 +381,7 @@ class TaxiProblem(search.Problem):
                     continue
                 elif taxi_action == 'refuel':
                     state['taxis'][taxi_name]['fuel'] = state['taxis'][taxi_name]['max_fuel']
+                    state['taxis'][taxi_name]['ever_fueled'] = True
             elif len(act) == 3:
                 if taxi_action == 'move':
                     cords = act[2]
@@ -377,7 +397,7 @@ class TaxiProblem(search.Problem):
                     state['number_passengers_picked_up'] += 1
                     state['taxis'][taxi_name]['names_passengers_aboard'].append(passenger_name)
                     ###
-                    #state['unpicked_passengers_list'].remove(passenger_name)
+                    # state['unpicked_passengers_list'].remove(passenger_name)
                     ###
                 elif taxi_action == 'drop off':
                     passenger_name = act[2]
@@ -386,110 +406,117 @@ class TaxiProblem(search.Problem):
                     state['goal_test_counter'] += 1
                     state['taxis'][taxi_name]['names_passengers_aboard'].remove(passenger_name)
 
-        state['rounds'] += 1
+        # state['rounds'] += 1
         return json.dumps(state)
 
     def goal_test(self, state):
         """ Given a state, checks if this is the goal state.
          Returns True if it is, False otherwise."""
         state = json.loads(state)
-
-        # print(state['goal_test_counter'])
-        # print(state['total_number_passengers'])
-        # print()
         if state['goal_test_counter'] == state['total_number_passengers']:
             state = json.dumps(state)
+
             return True
         state = json.dumps(state)
         return False
 
-    def taxis_can_pick_up(self, state, taxi_name):
-        """
-        Checks if the specific drone can pick up another package
-        :param drone_name: specific drone
-        :return: True if possible, False otherwise
-        """
-        return state['taxis'][taxi_name]['capacity'] < state['taxis'][taxi_name]['max_capacity']
-
     def h(self, node):
-        """ This is the heuristic. It gets a node (not a state,
-        state can be accessed via node.state)
-        and returns a goal distance estimate"""
-
-        current_state = json.loads(node.state)
+        penalty = 0
+        state = json.loads(node.state)
 
         cycles_penalty = 0
         if node.parent is not None:
             # if there is 1 taxi
             if len(node.action) == 1:
-                if node.action[0] == 'wait':
-                    return 10
-                if node.action[0] == 'drop off':
-                    return -10
-                elif node.action[0] == 'move':
+                if node.action[0] == 'move':
                     parent = node.parent
                     grand_parent = parent.parent
                     if parent is not None and grand_parent is not None:
                         grand_parent_state = json.loads(grand_parent.state)
                         taxi_name = grand_parent_state['taxis'].keys()
-                        if grand_parent_state['taxis'][taxi_name]['location'] == current_state['taxis'][taxi_name][
-                            'location']:
+                        if grand_parent_state['taxis'][taxi_name]['location'] == state['taxis'][taxi_name]['location']:
                             cycles_penalty += 10
 
             else:
                 # if there is more than 1 taxi
                 for action in node.action:
-                    if action[0] == 'wait':
-                        return 15
-                    if action[0] == 'drop off':
-                        return -20
-                    elif node.action[0] == 'move':
+                    if node.action[0] == 'move':
                         parent = node.parent
                         grand_parent = parent.parent
                         if parent is not None and grand_parent is not None:
                             grand_parent_state = json.loads(grand_parent.state)
                             taxi_name = action[1]
-                            if grand_parent_state['taxis'][taxi_name]['location'] == current_state['taxis'][taxi_name]['location']:
+                            if grand_parent_state['taxis'][taxi_name]['location'] == state['taxis'][taxi_name]['location']:
                                 cycles_penalty += 10
 
-        number_of_passengers = current_state['total_number_passengers']
-        number_of_passengers_picked_up = current_state['number_passengers_picked_up']
 
-        distances_to_destinations = 0
-        distances_to_locations = 0
+        number_of_unpicked = state['total_number_passengers'] - state['number_passengers_picked_up']
+        number_of_not_dropped_off = state['total_number_passengers'] - state['goal_test_counter']
+        list_passengers_not_dropped_off = []
+        for passenger_name in state['passengers']:
+            if (state['passengers'][passenger_name]['picked_up'] == True) and (
+                    state['passengers'][passenger_name]['dropped_off'] == False):
+                list_passengers_not_dropped_off.append(passenger_name)
 
-        # distance from taxi to destination of passenger
-        if number_of_passengers_picked_up > 0:
-            for taxi_name in current_state['taxis'].keys():
-                taxi_location = current_state['taxis'][taxi_name]['location']
-                for passenger_name in current_state['taxis'][taxi_name]['names_passengers_aboard']:
-                    passenger_destination = current_state['passengers'][passenger_name]['destination']
-                    key = (tuple(taxi_location), tuple(passenger_destination))
-                    if key in self.short_distances:
-                        distances_to_destinations += self.short_distances[key]
-                    # if distances_to_destinations == 0:#means that we can't arrive to the destination
-                    #     # bonus for intersection with client
-                    #     distances_to_destinations -= 1
+        distance_passenger_from_dest = 0
+        for passenger_name in list_passengers_not_dropped_off:
+            current_location = state['passengers'][passenger_name]['location']
+            destination = state['passengers'][passenger_name]['destination']
+            distance_passenger_from_dest += distance_with_I(state['map'], current_location, destination)
+
+        if number_of_not_dropped_off == 0:
+            mean_distances_passenger_from_dest = 0
+        else:
+            mean_distances_passenger_from_dest = distance_passenger_from_dest / number_of_not_dropped_off
+
+        list_unpicked_passengers = list(set(state['names_passengers']) - set(list_passengers_not_dropped_off))
+        distance_passenger_from_taxi = 0
+        for passenger_name in list_unpicked_passengers:
+            passenger_location = state['passengers'][passenger_name]['location']
+            distance_passenger_from_taxi += self.closest_taxi(state, passenger_location)
+
+        if number_of_unpicked == 0:
+            mean_distances_passenger_from_taxi = 0  # maybe a negative number
+        else:
+            mean_distances_passenger_from_taxi = distance_passenger_from_taxi / number_of_unpicked
+
+        closest_passenger_aboard = 0
+        for taxi_name in list(state['taxis'].keys()):
+            closest_passenger_aboard = self.closest_passenger(state, taxi_name)
+            if closest_passenger_aboard < state['taxis'][taxi_name]['fuel'] and closest_passenger_aboard < 0 and not state['taxis'][taxi_name]['ever_fueled']:
+                penalty -= 5
+
+        if number_of_not_dropped_off == 1 and state['number_of_taxis'] == 1 and list_passengers_not_dropped_off:
+            passenger_name = list_passengers_not_dropped_off[0]
+            passenger_destination = state['passengers'][passenger_name]['destination']
+            taxi_name = list(state['taxis'].keys())[0]
+            taxi_location = state['taxis'][taxi_name]['location']
+            dist_taxi_destination = distance_with_I(state['map'], taxi_location, passenger_destination)
+            if dist_taxi_destination <= state['taxis'][taxi_name]['fuel']:
+                penalty -= 2
 
 
-        # distances from taxis to unpicked passengers locations
-        for taxi_name in current_state['taxis'].keys():
-            taxi_location = current_state['taxis'][taxi_name]['location']
-            if not self.taxis_can_pick_up(current_state, taxi_name):
-                continue
-            for passenger_name in current_state['passengers'].keys():
-                passenger_location = current_state['passengers'][passenger_name]['location']
-                key = (tuple(taxi_location), tuple(passenger_location))
-                if key in self.short_distances:
-                    distances_to_locations += self.short_distances[key]
-                # if distances_to_locations == 0:
-                #     # bonus for intersection with client
-                #     distances_to_locations -= 1
-
-        penalty = distances_to_locations + (number_of_passengers_picked_up * 3.5) + (
-                number_of_passengers * 7.2) + distances_to_destinations + cycles_penalty + node.path_cost
-
+        penalty += (number_of_unpicked * 10) + (number_of_not_dropped_off) + mean_distances_passenger_from_dest + mean_distances_passenger_from_taxi + cycles_penalty
         return penalty
+
+    def closest_passenger(self, state, taxi_name):
+        min_dist = []
+        for passenger_aboard in state['taxis'][taxi_name]['names_passengers_aboard']:
+            passenger_aboard_destination = state['passengers'][passenger_aboard]['destination']
+            taxi_location = state['taxis'][taxi_name]['location']
+            dist = distance_with_I(state['map'], taxi_location, passenger_aboard_destination)
+            min_dist.append(dist)
+        if not min_dist:
+            return 0
+        return min(min_dist)
+
+    def closest_taxi(self, state, passenger_location):
+        distances = []
+        for taxi_name in list(state['taxis'].keys()):
+            taxi_location = state['taxis'][taxi_name]['location']
+            dist = distance_with_I(state['map'], taxi_location, passenger_location)
+            distances.append(dist)
+        return min(distances)
 
     def h_0(self, node):
         return 0
@@ -537,119 +564,6 @@ class TaxiProblem(search.Problem):
 
         return (sum(D) + sum(T)) / state['number_of_taxis']
 
-    def hShai(self, node):
-        penalty = 0
-        circles = 0
-        curr_state = json.loads(node.state)
-        rounds = curr_state['rounds']
-        taxis_number = curr_state['number_of_taxis']
-        passengers_number = curr_state['total_number_passengers']
-        M = len(curr_state['map'])
-        N = len(curr_state['map'][0])
-        if M <= 5 and N <= 5 and taxis_number == 1 and passengers_number <= 2:
-            return self.use_manhattan(curr_state, penalty=0)
-
-        else:
-            if node.action is not None:
-                for act in node.action:
-                    if act[0] == 'wait':
-                        penalty += 10
-                    if act[0] == 'pick up':
-                        penalty -= 10
-                    elif act[0] == 'drop off':
-                        penalty -= 10
-                    elif act[0] == 'move':
-                        if act[2] in [(1,2), (1,3), (1,4), (2,4), (3,4), (4,4), (4,3), (4,2), (3,2), (4,1), (4,0), (3,0), (2,0), (2,1), (3,1)]:
-                            penalty -= 100
-                        # punish for cycles
-                        parent = node.parent
-                        grand_parent = parent.parent
-                        if parent is not None and grand_parent is not None:
-                            grand_parent_state = json.loads(grand_parent.state)
-                            taxi_name = act[1]
-                            if grand_parent_state['taxis'][taxi_name]['location'] == curr_state['taxis'][taxi_name][
-                                'location']:
-                                circles += 10
-                        # check if the move is toward unpicked some passenger or picked passenger
-                        # destination
-                        for passenger_location in curr_state['initial_passengers_locations']:
-                            if act[2] == passenger_location:
-                                penalty -= 5
-                            else:
-                                penalty += 3
-                        for passenger_destination in curr_state['passengers_destinations']:
-                            if act[2] == passenger_destination:
-                                penalty -= 5
-                            else:
-                                penalty += 3
-
-        # compute distances of taxis to unpicked passengers
-        distances = 0
-        dist_from_closest_unpicked_passenger = []
-        locations_and_destinations = list(zip(curr_state['initial_passengers_locations'], curr_state['passengers_destinations']))
-        for loc, dest in locations_and_destinations:
-            distances += manhattan(loc, dest)
-        for taxi_name in curr_state['taxis_names']:
-            dist_from_closest_unpicked_passenger.append(self.calc_dist(taxi_name, curr_state))
-            if curr_state['taxis'][taxi_name]['location'][1] == N:
-                penalty -= 15
-        distances = min(dist_from_closest_unpicked_passenger)
-
-
-        land_marks = passengers_number - curr_state['number_passengers_picked_up']
-        if node.depth > 15:
-            return 1000
-        return curr_state['number_passengers_picked_up'] + passengers_number + circles + node.path_cost + distances + penalty
-
-
-    def h_notGood(self, node):
-        state = json.loads(node.state)
-        M = len(state['map'])
-        N = len(state['map'][0])
-        penalty = 0
-        num_taxis = state['number_of_taxis']
-        if num_taxis == 1:
-            taxi = state['taxis_names'][0]
-            taxi_location = state['taxis'][taxi]['location']
-            dist_from_unpicked_passengers = []
-            dist_from_picked_passengers = []
-            min_dist_from_unpicked = (manhattan((0,0), (M-1, N-1)))/2
-            min_dist_from_picked = (manhattan((0,0), (M-1, N-1)))/2
-            if state['taxis'][taxi]['capacity'] > 0:
-                for passenger in state['unpicked_passengers_list']:
-                    passenger_location = state['passengers'][passenger]['location']
-                    dist_from_unpicked_passengers.append(manhattan(taxi_location, passenger_location))
-                if len(dist_from_unpicked_passengers) != 0:
-                    min_dist_from_unpicked = statistics.mean(dist_from_unpicked_passengers)
-            if state['taxis'][taxi]['capacity'] != state['taxis'][taxi]['max_capacity']:
-                picked_passengers_list = list(set(state['names_passengers']) - set(state['unpicked_passengers_list']))
-                for passenger in picked_passengers_list:
-                    passenger_location = state['passengers'][passenger]['location']
-                    dist_from_picked_passengers.append(manhattan(taxi_location, passenger_location))
-                if len(dist_from_picked_passengers) != 0:
-                    if min(dist_from_picked_passengers) != 0:
-                        min_dist_from_picked = statistics.mean(dist_from_picked_passengers)
-                    else:
-                        if len(set(dist_from_picked_passengers) - {0}) != 0:
-                            min_dist_from_picked = min(set(dist_from_picked_passengers) - {0})
-                        else:
-                            min_dist_from_picked = 5
-            penalty = (min_dist_from_unpicked + min_dist_from_picked)/2
-        # print(penalty)
-        return penalty
-
-
-
-
-
-        # elif num_taxis == 2:
-        #     pass
-        #
-        # else:
-        #     return self.use_manhattan(state, penalty=0)
-
-
-
     def use_manhattan(self, state, penalty):
         D = []
         T = []
@@ -668,69 +582,25 @@ class TaxiProblem(search.Problem):
 
         return ((sum(D) + sum(T)) / state['number_of_taxis']) + penalty
 
+    def use_manhattan_with_I(self, state, penalty):
+        D = []
+        T = []
+        map = state['map']
 
-    def calc_dist(self, taxi_name, state):
-        unpicked_passengers_names = state['unpicked_passengers_list']
-        total_dist = 0
-        for unpicked_passenger in unpicked_passengers_names:
-            passenger_location = state['passengers'][unpicked_passenger]['location']
-            taxi_location = state['taxis'][taxi_name]['location']
-            total_dist += manhattan(passenger_location, taxi_location)
+        for passenger in state['passengers']:
+            if state['passengers'][passenger]['picked_up'] == False and state['passengers'][passenger][
+                'dropped_off'] == False:
+                passenger_location = state['passengers'][passenger]['location']
+                passenger_destination = state['passengers'][passenger]['destination']
+                D.append(distance_with_I(map, passenger_location, passenger_destination))
+            if state['passengers'][passenger]['picked_up'] == True and state['passengers'][passenger][
+                'dropped_off'] == False:
+                passenger_location = state['passengers'][passenger]['location']
+                passenger_destination = state['passengers'][passenger]['destination']
+                T.append(distance_with_I(map, passenger_location, passenger_destination))
 
-        return total_dist
+        return ((sum(D) + sum(T)) / state['number_of_taxis']) + penalty
 
-    def solve_for_many_I(self, node, state):
-        score = 0
-        if node.action is not None:
-            for act in node.action:
-                if act[0] == 'wait':
-                    score += 10
-                if len(act) == 3:
-                    if act[0] == 'pick_up' or act[0] == 'drop_off':
-                        score -= 10
-                    elif act[0] == 'move':
-                        if act[2] in [(1,2), (1,3), (1,4), (2,4), (3,4), (4,4), (4,3), (4,2), (3,2), (4,1), (4,0), (3,0), (2,0), (2,1), (3,1)]:
-                            score -= 100
-        return score
-
-    def update_map(self, game_map, packages):
-        """
-        Updates the map with the given packages, increment the amount of packages in the specific cell.
-        """
-        for x, y in packages.values():
-            if game_map[x][y] == 'I':
-                continue
-            if game_map[x][y] == 'P' or game_map[x][y] == 'G':
-                game_map[x][y] = 1
-            else:
-                game_map[x][y] += 1
-    def build_graph(self, game_map):
-        G = nx.Graph()
-        rows, cols = len(game_map), len(game_map[0])
-        for i in range(rows):
-            for j in range(cols):
-                if game_map[i][j] == 'I':
-                    continue
-                # edge from (i,j) to its adjacent: (i+1,j), (i-1,j), (i,j+1), (i,j-1)
-                if i + 1 < rows and game_map[i + 1][j] != 'I':
-                    G.add_edge((i, j), (i + 1, j))
-                if i - 1 >= 0 and game_map[i - 1][j] != 'I':
-                    G.add_edge((i, j), (i - 1, j))
-                if j + 1 < cols and game_map[i][j + 1] != 'I':
-                    G.add_edge((i, j), (i, j + 1))
-                if j - 1 >= 0 and game_map[i][j - 1] != 'I':
-                    G.add_edge((i, j), (i, j - 1))
-        return G
-
-    def create_shortest_path_distances(self, G):
-        d = {}
-        for n1 in G.nodes:
-            for n2 in G.nodes:
-                if n1 == n2:
-                    continue
-                d[(n1, n2)] = len(nx.shortest_path(G, n1, n2)) - 1
-        print(d)
-        return d
 
 def create_taxi_problem(game):
     return TaxiProblem(game)
