@@ -1,14 +1,14 @@
 import random
 import networkx as nx
 
-from _ex2 import TaxiAgent, ids, OptimalTaxiAgent
+from ex2 import TaxiAgent, ids, OptimalTaxiAgent
 from inputs import small_inputs
 import logging
 import time
 from copy import deepcopy
 
 RESET_PENALTY = 50
-REFUEL_PENALTY = 50
+REFUEL_PENALTY = 10
 DROP_IN_DESTINATION_REWARD = 100
 INIT_TIME_LIMIT = 300
 TURN_TIME_LIMIT = 0.1
