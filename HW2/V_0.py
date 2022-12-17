@@ -19,7 +19,6 @@ state = {
 
 
 
-
 v_0 = {}
 m = len(state['map'])
 n = len(state['map'][0])
@@ -33,8 +32,8 @@ possible_location_passengers = [(i, j) for j in range(m) for i in range(n)]
 possible_destination_passengers = [state['passengers'][passenger_name]["possible_goals"] for passenger_name in state['passengers'].keys()]
 
 for taxi_name in state['taxis'].keys():
-    fuel_taxis += [[i for i in range(state['taxis'][taxi_name]['max_fuel'])]]
-    capacity_taxis += [[i for i in range(state['taxis'][taxi_name]['max_capacity'])]]
+    fuel_taxis += [[i for i in range(state['taxis'][taxi_name]['max_fuel'] + 1)]]
+    capacity_taxis += [[i for i in range(state['taxis'][taxi_name]['max_capacity'] + 1)]]
     possible_location_passengers.append(taxi_name)
 
 possible_location_passengers = number_passengers * [possible_location_passengers]
@@ -61,7 +60,6 @@ copy_state = copy.deepcopy(state)
 # for number_of_taxis in range(number_taxis):
 k = 0
 for location_taxis in all_possible_location_taxis:
-    state = copy.deepcopy(copy_state)
     for location_passengers in all_possible_location_passengers:
         for destination_passengers in all_possible_destination_passengers:
             for taxis_fuel in all_fuels:
@@ -76,17 +74,17 @@ for location_taxis in all_possible_location_taxis:
                         taxi_counter += 1
                     for passenger_name in state['passengers'].keys():
                         state['passengers'][passenger_name]["location"] = location_passengers[passenger_counter] # √
-                        state['passengers'][passenger_name]["destination"] = destination_passengers[passenger_counter]
+                        state['passengers'][passenger_name]["destination"] = destination_passengers[passenger_counter] # √
                         passenger_counter += 1
-                    v_0['state' + str(k)] = state
+                    v_0['state' + str(k)] = copy.deepcopy(state)
+                    state = copy.deepcopy(copy_state)
                     k += 1
 
 
+
 counter = 0
-print(v_0['state1'])
-print()
-for state in v_0.keys():
-    print(v_0[state])
+for i in v_0.keys():
+    print(v_0[i])
+    counter += 1
     if counter == 100:
         break
-    counter += 1
