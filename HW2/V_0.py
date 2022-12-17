@@ -1,6 +1,6 @@
 import copy
 import itertools
-
+import time
 state = {
     "map": [['P', 'P'],
             ['P', 'G']],
@@ -16,10 +16,9 @@ state = {
     "number_taxis": 2,
     "number_passengers": 2}
 
-
-
-
 v_0 = {}
+v_1 = {}
+reward = {}
 m = len(state['map'])
 n = len(state['map'][0])
 number_taxis = state['number_taxis']
@@ -29,7 +28,8 @@ capacity_taxis = []
 # [(0,0), (1,0), ... ,(m-1,n-1)]
 possible_location_taxis = number_taxis * [[(i, j) for j in range(m) for i in range(n)]]
 possible_location_passengers = [(i, j) for j in range(m) for i in range(n)]
-possible_destination_passengers = [state['passengers'][passenger_name]["possible_goals"] for passenger_name in state['passengers'].keys()]
+possible_destination_passengers = [state['passengers'][passenger_name]["possible_goals"] for passenger_name in
+                                   state['passengers'].keys()]
 
 for taxi_name in state['taxis'].keys():
     fuel_taxis += [[i for i in range(state['taxis'][taxi_name]['max_fuel'] + 1)]]
@@ -56,8 +56,8 @@ all_capacity = list((itertools.product(*capacity_taxis)))
 #           "number_taxis" : 1
 #           "number_passengers" : 1}
 
-copy_state = copy.deepcopy(state)
-# for number_of_taxis in range(number_taxis):
+
+time1 = time.time()
 k = 0
 for location_taxis in all_possible_location_taxis:
     for location_passengers in all_possible_location_passengers:
@@ -65,26 +65,64 @@ for location_taxis in all_possible_location_taxis:
             for taxis_fuel in all_fuels:
                 for taxis_capacity in all_capacity:
                     # Fill the state
+                    reset = []
+                    reward = 0
                     taxi_counter = 0
                     passenger_counter = 0
+                    state_i = dict()
+                    state_i['taxis'] = {}
+                    state_i['passengers'] = {}
+
                     for taxi_name in state['taxis'].keys():
-                        state['taxis'][taxi_name]["location"] = location_taxis[taxi_counter] # √
-                        state['taxis'][taxi_name]["fuel"] = taxis_fuel[taxi_counter] # √
-                        state['taxis'][taxi_name]["capacity"] = taxis_capacity[taxi_counter] # √
+                        state_i['taxis'][taxi_name] = {}
+                        state_i['taxis'][taxi_name]["location"] = location_taxis[taxi_counter]
+                        state_i['taxis'][taxi_name]["fuel"] = taxis_fuel[taxi_counter]
+                        state_i['taxis'][taxi_name]["capacity"] = taxis_capacity[taxi_counter]
+                        if state_i['taxis'][taxi_name]["fuel"] == state['taxis'][taxi_name]["max_fuel"] and \
+                                state_i['taxis'][taxi_name]["location"] != state['taxis'][taxi_name]["location"]:
+                            reward -= 10
+                        if state_i['taxis'][taxi_name]["location"] == state['taxis'][taxi_name]["location"] and \
+                                state_i['taxis'][taxi_name]["fuel"] == state['taxis'][taxi_name]["max_fuel"] and \
+                                state_i['taxis'][taxi_name]["capacity"] == state['taxis'][taxi_name]["max_capacity"]:
+                            reset.append(True)
+                        else:
+                            reset.append(False)
                         taxi_counter += 1
+
                     for passenger_name in state['passengers'].keys():
-                        state['passengers'][passenger_name]["location"] = location_passengers[passenger_counter] # √
-                        state['passengers'][passenger_name]["destination"] = destination_passengers[passenger_counter] # √
+                        state_i['passengers'][passenger_name] = {}
+                        state_i['passengers'][passenger_name]["location"] = location_passengers[passenger_counter]
+                        state_i['passengers'][passenger_name]["destination"] = destination_passengers[passenger_counter]
+                        if state_i['passengers'][passenger_name]["location"] == state_i['passengers'][passenger_name][
+                            "destination"]:
+                            reward += 100
+                        if state_i['passengers'][passenger_name]["location"] == state['passengers'][passenger_name][
+                            "location"] and \
+                                state_i['passengers'][passenger_name]["destination"] == \
+                                state['passengers'][passenger_name]["destination"]:
+                            reset.append(True)
+                        else:
+                            reset.append(False)
                         passenger_counter += 1
-                    v_0['state' + str(k)] = copy.deepcopy(state)
-                    state = copy.deepcopy(copy_state)
+
+                    if sum(reset) == len(reset):
+                        reward -= 50
+
+                    v_0['state' + str(k)] = [state_i, reward]
+                    v_1['state' + str(k)] = [state_i, reward]
+                    reward['state' + str(k)] = [state_i, reward]
                     k += 1
 
 
+print(time.time() - time1)
 
-counter = 0
-for i in v_0.keys():
-    print(v_0[i])
-    counter += 1
-    if counter == 100:
-        break
+print()
+
+# v_0 = {(state1: (..), Reward),
+#        (state2: (..), Reward)}
+# for state in v_t_1.keys():
+#    v_1[state][1] = new Reward
+
+
+
+
