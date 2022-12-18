@@ -145,7 +145,7 @@ def tree_search(problem, frontier):
     """Search through the successors of a problem to find a goal.
     The argument frontier should be an empty queue.
     Don't worry about repeated paths to a state. [Figure 3.7]"""
-    frontier.append(Node(problem.initial))
+    frontier.append(Node(problem.initial_improved))
     while frontier:
         node = frontier.pop()
         if problem.goal_test(node.state):
@@ -158,7 +158,7 @@ def graph_search(problem, frontier):
     """Search through the successors of a problem to find a goal.
     The argument frontier should be an empty queue.
     If two paths reach a state, only use the first one. [Figure 3.7]"""
-    frontier.append(Node(problem.initial))
+    frontier.append(Node(problem.initial_improved))
     explored = set()
     while frontier:
         node = frontier.pop()
@@ -188,7 +188,7 @@ def depth_first_graph_search(problem):
 
 def breadth_first_search(problem):
     """[Figure 3.11]"""
-    node = Node(problem.initial)
+    node = Node(problem.initial_improved)
     if problem.goal_test(node.state):
         return node
     frontier = FIFOQueue()
@@ -214,7 +214,7 @@ def best_first_graph_search(problem, f):
     values will be cached on the nodes as they are computed. So after doing
     a best first search you can examine the f values of the path returned."""
     f = memoize(f, 'f')
-    node = Node(problem.initial)
+    node = Node(problem.initial_improved)
     if problem.goal_test(node.state):
         return node
     frontier = PriorityQueue(min, f)
@@ -259,7 +259,7 @@ def depth_limited_search(problem, limit=50):
             return 'cutoff' if cutoff_occurred else None
 
     # Body of depth_limited_search:
-    return recursive_dls(Node(problem.initial), problem, limit)
+    return recursive_dls(Node(problem.initial_improved), problem, limit)
 
 
 def iterative_deepening_search(problem):
