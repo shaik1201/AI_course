@@ -1,7 +1,8 @@
 import copy
 import itertools
 import random
-
+import time
+import pickle
 import networkx as nx
 import logging
 
@@ -34,9 +35,13 @@ ids = ["204864532", "206202384"]
 #           "number_taxis" : 1
 #           "number_passengers" : 1}
 
+time1 = time.time()
+
 
 class OptimalTaxiAgent:
+
     def __init__(self, initial):
+        global time1
         self.initial = initial
         self.initial_improved = copy.deepcopy(initial)
         self.initial_improved['number_taxis'] = len(initial['taxis'].keys())
@@ -45,22 +50,42 @@ class OptimalTaxiAgent:
             self.initial_improved['taxis'][taxi]['max_fuel'] = initial['taxis'][taxi]['fuel']
             self.initial_improved['taxis'][taxi]['max_capacity'] = initial['taxis'][taxi]['capacity']
         self.distances = Distances(initial)
+        print('starting value initialization')
+        print(time.time() - time1)
+        print()
+        self.optimal_actions = self.value_iteration_algorithm()
 
     # check distance: print(self.distances.check_distances(self.distances.shortest_path_distances, (0,0), (1,2)))
 
     # For a given state we return the best policy (=action)
     def act(self, state):
-        return 'wait'
+        del state['turns to go']
+        return self.optimal_actions[str(state)]
 
-
+    # states = [{state1}, {state2},...]
+    # rewards = [100, 50,...]
+    # turns_to_go = [100, 100, ...]
     def value_iteration_algorithm(self):
-        v_t_1, v_t, reward = self.value_state_initialization()
+        states, rewards, values = self.value_state_initialization()
+        # pickle.dump(states, open('states.pkl', 'wb'))
+        print('starting value iteration')
         all_possible_actions = self.create_randoms_action()
         t = self.initial["turns to go"]
-        for i in range(1, t+1):
-            for state in reward.keys():
+        turns_to_go = [t for i in range(len(states))]
+        optimal_actions = dict()
+        for i in range(1, 2):
+        # for i in range(1, t+1):
+            print(time.time() - time1)
+            print(f'round {i}')
+
+            #we need to update the turns to go and value of each state in the end of each iteration on the states
+            # idx of states to change in the end of each iteration on the states
+            counter_state = 0
+            idx_states_to_change = []
+            for state in states:
                 actions = self.actions(state, all_possible_actions)
                 actions_states = dict()
+
                 for action in actions:
                     copy_state = copy.deepcopy(state)
                     self.result(copy_state, action)
@@ -68,38 +93,37 @@ class OptimalTaxiAgent:
                     # probability_s_s1 = self.transition_function(state, action, copy_state)
                 probability_s_s1 = 1
                 value_for_each_state = dict()
-                for action_state in actions_states.keys():
-                    value_for_each_state[action_state] = v_t_1[actions_states[action_state]][1] * probability_s_s1
-                max_value = max(value_for_each_state.values())
 
+                for action1 in actions_states.keys():
+                    idx_of_state = states.index(actions_states[action1])
+                    value_for_each_state[action1] = [values[idx_of_state] * probability_s_s1, idx_of_state]
+
+                tuple_max = max(value_for_each_state.values(), key=lambda sub: sub[0])
+                if i == t:
+                    max_action = max(value_for_each_state, key=value_for_each_state.get)
+                    optimal_actions[str(state)] = max_action
+                max_value = tuple_max[0]
+                max_idx_state = tuple_max[1]
+                new_value_state = rewards[counter_state] + max_value
+                idx_states_to_change.append((new_value_state, max_idx_state))
+                counter_state += 1
                 # We need the max action for the policy
-                # max_action = max(value_for_each_state, key=value_for_each_state.get)
 
-                # We are Here !
+            for j in idx_states_to_change:
+                turns_to_go[j[1]] -= 1
+                values[j[1]] = j[0]
 
-                # PROBLEM !!!! : HOW TO
-                # v_t[state][1] = reward[state] + max_value
-                # v_t[state][0] -= 1
-                # v_t_1[state][1] = v_t[state][1]
-                # v_t_1[state][0] = v_t[state][0]
-
-            # v_t_1 = copy.deepcopy(v_t)
-
-
-### IMPORTANT:  AS WE HAVE SEEN THE STATES DON'T CHANGE OVER ITERATIONS, JUST REWARD AND TURNS TO GO DO
-###             SO MAYBE WE WILL SAVE JUST ONE DICT OF STATES (THAT DOESN'T CHANGE OVER ITERATIONS) AND
-###             TWO LISTS VT_1 AND V_T WITH TURNS TO GO AND REWARDS AS VALUES
-
-
+        return optimal_actions
 
 
 
     # locations of taxis, fuel of taxis, capacity of taxis, location of passengers, destinations of passengers
     def value_state_initialization(self):
+        time2 = time.time()
         state = self.initial_improved
-        v_0 = dict()
-        v_1 = dict()
-        reward1 = dict()
+        states = list()
+        rewards = list()
+        values = list()
         m = len(state['map'])
         n = len(state['map'][0])
         number_taxis = state['number_taxis']
@@ -122,6 +146,16 @@ class OptimalTaxiAgent:
         all_possible_destination_passengers = list(itertools.product(*possible_destination_passengers))
         all_fuels = list(itertools.product(*fuel_taxis))
         all_capacity = list((itertools.product(*capacity_taxis)))
+
+        # initial: { "optimal": True,
+        #           "map": [['P', 'P', 'P'],
+        #                   ['P', 'G', 'P'],
+        #                   ['P', 'P', 'P']],
+        #           "taxis": {'taxi 1': {"location": (0, 0), "fuel": 10, "capacity": 1}},
+        #           "passengers": {'Dana': {"location": (2, 2), "destination": (0, 0),
+        #                   "possible_goals": ((0, 0), (2, 2)), "prob_change_goal": 0.1}},
+        #           "turns to go": 100 }
+
 
         k = 0
         turns_to_go = state['turns to go']
@@ -185,16 +219,14 @@ class OptimalTaxiAgent:
                             if sum(reset) == len(reset):
                                 reward -= 50
 
-                            str_state_i = str(sorted(state_i.items()))
-                            v_0[str_state_i] = [turns_to_go, reward]
-                            v_1[str_state_i] = [turns_to_go, reward]
-                            reward1[str_state_i] = [turns_to_go, reward]
-
+                            states.append(state_i)
+                            rewards.append(reward)
+                            values.append(reward)
                             k += 1
-        return v_0, v_1, reward1
+        print(time.time() - time2)
+        print()
+        return states, rewards, values
 
-    def transition_function(self, state, action, state1):
-        return 0
 
     def create_randoms_action(self):
         m = len(self.initial_improved['map'])
@@ -214,8 +246,8 @@ class OptimalTaxiAgent:
             actions.append(taxis_actions)
 
         all_possible_actions = list(itertools.product(*actions))
-        all_possible_actions.append('reset')
-        all_possible_actions.append('terminate')
+        all_possible_actions.append(tuple('reset',),)
+        all_possible_actions.append(tuple('terminate',),)
         return all_possible_actions
 
     def actions(self, state, all_possible_actions):
@@ -291,32 +323,32 @@ class OptimalTaxiAgent:
             return True
 
         if len(action) != len(state["taxis"].keys()):
-            logging.error(f"You had given {len(action)} atomic commands, while there are {len(state['taxis'])}"
-                          f" taxis in the problem!")
+            # logging.error(f"You had given {len(action)} atomic commands, while there are {len(state['taxis'])}"
+            #               f" taxis in the problem!")
             return False
 
         for atomic_action in action:
             # illegal move action
             if atomic_action[0] == 'move' and not _is_move_action_legal(atomic_action):
-                logging.error(f"Move action {atomic_action} is illegal!")
+                # logging.error(f"Move action {atomic_action} is illegal!")
                 return False
             # illegal pick action
             elif atomic_action[0] == 'pick up' and not _is_pick_up_action_legal(atomic_action):
-                logging.error(f"Pick action {atomic_action} is illegal!")
+                # logging.error(f"Pick action {atomic_action} is illegal!")
                 return False
             # illegal drop action
             elif atomic_action[0] == 'drop off' and not _is_drop_action_legal(atomic_action):
-                logging.error(f"Drop action {atomic_action} is illegal!")
+                # logging.error(f"Drop action {atomic_action} is illegal!")
                 return False
             # illegal refuel action
             elif atomic_action[0] == 'refuel' and not _is_refuel_action_legal(atomic_action):
-                logging.error(f"Refuel action {atomic_action} is illegal!")
+                # logging.error(f"Refuel action {atomic_action} is illegal!")
                 return False
             elif atomic_action[0] == 'wait':
                 return True
         # check mutex action
         if _is_action_mutex(action):
-            logging.error(f"Actions {action} are mutex!")
+            # logging.error(f"Actions {action} are mutex!")
             return False
         return True
 
@@ -333,6 +365,7 @@ class OptimalTaxiAgent:
         apply the action to the state
         """
         if action == "reset":
+            print('succeed')
             self.reset_environment(state)
         if action == "terminate":
             self.terminate_execution(state)
@@ -355,7 +388,12 @@ class OptimalTaxiAgent:
         elif atomic_action[0] == 'drop off':
             passenger_name = atomic_action[2]
             state['passengers'][passenger_name]['location'] = state['taxis'][taxi_name]['location']
-            state['taxis'][taxi_name]['capacity'] += 1
+            #####################
+            if state['taxis'][taxi_name]['capacity'] < self.initial_improved['taxis'][taxi_name]['max_capacity']:
+                state['taxis'][taxi_name]['capacity'] += 1
+
+            #####################
+
             return
         elif atomic_action[0] == 'refuel':
             state['taxis'][taxi_name]['fuel'] = self.initial['taxis'][taxi_name]['fuel']
@@ -374,7 +412,7 @@ class OptimalTaxiAgent:
             if random.random() < passenger_stats['prob_change_goal']:
                 # change destination
                 passenger_stats['destination'] = random.choice(passenger_stats['possible_goals'])
-        state["turns to go"] -= 1
+        # state["turns to go"] -= 1
         return
 
     def reset_environment(self, state):
@@ -383,7 +421,7 @@ class OptimalTaxiAgent:
         """
         state["taxis"] = self.initial["taxis"]
         state["passengers"] = self.initial["passengers"]
-        state["turns to go"] -= 1
+        # state["turns to go"] -= 1
         return
 
     def terminate_execution(self, state):
