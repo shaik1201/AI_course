@@ -5,6 +5,7 @@ import time
 import pickle
 import networkx as nx
 import logging
+import json
 
 ids = ["204864532", "206202384"]
 
@@ -59,8 +60,12 @@ class OptimalTaxiAgent:
 
     # For a given state we return the best policy (=action)
     def act(self, state):
-        del state['turns to go']
-        return self.optimal_actions[str(state)]
+        x = state.pop('turns to go', None)
+        tmp = json.dumps(state)
+        # print(tmp)
+        action = self.optimal_actions[tmp]
+        state['turns to go'] = x
+        return action
 
     # states = [{state1}, {state2},...]
     # rewards = [100, 50,...]
@@ -73,7 +78,7 @@ class OptimalTaxiAgent:
         t = self.initial["turns to go"]
         turns_to_go = [t for i in range(len(states))]
         optimal_actions = dict()
-        for i in range(1, 2):
+        for i in range(0, 3):
         # for i in range(1, t+1):
             print(time.time() - time1)
             print(f'round {i}')
@@ -99,20 +104,19 @@ class OptimalTaxiAgent:
                     value_for_each_state[action1] = [values[idx_of_state] * probability_s_s1, idx_of_state]
 
                 tuple_max = max(value_for_each_state.values(), key=lambda sub: sub[0])
-                if i == t:
+                if i == 2:
                     max_action = max(value_for_each_state, key=value_for_each_state.get)
-                    optimal_actions[str(state)] = max_action
+                    optimal_actions[json.dumps(state)] = max_action
                 max_value = tuple_max[0]
                 max_idx_state = tuple_max[1]
                 new_value_state = rewards[counter_state] + max_value
                 idx_states_to_change.append((new_value_state, max_idx_state))
                 counter_state += 1
-                # We need the max action for the policy
 
             for j in idx_states_to_change:
                 turns_to_go[j[1]] -= 1
                 values[j[1]] = j[0]
-
+        print(list(optimal_actions.keys())[0])
         return optimal_actions
 
 
@@ -131,18 +135,31 @@ class OptimalTaxiAgent:
         fuel_taxis = []
         capacity_taxis = []
         possible_location_taxis = number_taxis * [[(i, j) for j in range(m) for i in range(n)]]
-        possible_location_passengers = [(i, j) for j in range(m) for i in range(n)]
-        possible_destination_passengers = [state['passengers'][passenger_name]["possible_goals"] for passenger_name in state['passengers'].keys()]
+        possible_location_passengers = []
+        possible_destination_passengers = []
+        taxis_tames = []
+        for taxi_name in state['taxis'].keys():
+            taxis_tames.append(taxi_name)
+        for passenger_name in state['passengers'].keys():
+            poss_location = list()
+            poss_destination = list()
+            for possible_destination in state['passengers'][passenger_name]['possible_goals']:
+                poss_location.append(possible_destination)
+                poss_destination.append(possible_destination)
+            poss_location += [state['passengers'][passenger_name]['location']] + taxis_tames
+            if state['passengers'][passenger_name]['destination'] not in poss_destination:
+                poss_location.append(state['passengers'][passenger_name]['destination'])
+                poss_destination.append(state['passengers'][passenger_name]['destination'])
+            possible_location_passengers.append(poss_location)
+            possible_destination_passengers.append(poss_destination)
 
         for taxi_name in state['taxis'].keys():
             fuel_taxis += [[i for i in range(state['taxis'][taxi_name]['max_fuel'] + 1)]]
             capacity_taxis += [[i for i in range(state['taxis'][taxi_name]['max_capacity'] + 1)]]
-            possible_location_passengers.append(taxi_name)
-
-        possible_location_passengers = number_passengers * [possible_location_passengers]
 
         all_possible_location_taxis = list(itertools.product(*possible_location_taxis))
         all_possible_location_passengers = list(itertools.product(*possible_location_passengers))
+        print(all_possible_location_passengers)
         all_possible_destination_passengers = list(itertools.product(*possible_destination_passengers))
         all_fuels = list(itertools.product(*fuel_taxis))
         all_capacity = list((itertools.product(*capacity_taxis)))
@@ -225,6 +242,7 @@ class OptimalTaxiAgent:
                             k += 1
         print(time.time() - time2)
         print()
+        print(len(states))
         return states, rewards, values
 
 
