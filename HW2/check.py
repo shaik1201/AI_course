@@ -2,7 +2,8 @@ import random
 import networkx as nx
 
 from ex2 import TaxiAgent, ids, OptimalTaxiAgent
-# from additional_inputs import additional_inputs
+# from ilay import TaxiAgent, ids, OptimalTaxiAgent
+from additional_inputs import additional_inputs
 from inputs import small_inputs
 import logging
 import time
@@ -55,7 +56,7 @@ class TaxiStochasticProblem:
         while self.state["turns to go"]:
             start = time.perf_counter()
             action = self.agent.act(self.state)
-            print(self.state)
+            # print(self.state)
             print(action)
             print()
             end = time.perf_counter()
@@ -278,12 +279,12 @@ def main():
             my_problem.run_round()
         except EndOfGame:
             continue
-    # for an_input in additional_inputs:
-    #     try:
-    #         my_problem = TaxiStochasticProblem(an_input)
-    #         my_problem.run_round()
-    #     except EndOfGame:
-    #         continue
+    for an_input in additional_inputs:
+        try:
+            my_problem = TaxiStochasticProblem(an_input)
+            my_problem.run_round()
+        except EndOfGame:
+            continue
 
 
 if __name__ == '__main__':

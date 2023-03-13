@@ -1,0 +1,1 @@
+x = '{"optimal": true, "turns to go": 50, "map": [["P", "P", "G", "P", "P"]], "taxis": {"taxi 1": {"location": [0, 0], "fuel": 10, "capacity": 1}}, "passengers": {"Michael": {"location": [0, 0], "destination": [0, 4], "possible_goals": [[0, 0], [0, 4]], "prob_change_goal": 0.2}}}'
